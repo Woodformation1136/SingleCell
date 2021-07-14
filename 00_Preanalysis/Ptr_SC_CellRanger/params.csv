@@ -1,0 +1,5 @@
+num_principal_comps,10
+max_clusters,20
+umap_n_neighbors,50
+umap_min_dist,0.5
+random_seed,17

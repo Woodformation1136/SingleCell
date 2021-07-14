@@ -1,0 +1,8 @@
+#!/bin/bash
+
+cellranger reanalyze --params PARAMS.csv \
+                     --localcores 32 \
+                     --localmem 128 \
+                     --localvmem 64 \
+                     --id 20200324 \
+                     --matrix /home/woodformation/Dry_lab_bench/Cre/20210106_scseq_Ptr2018/Ptr_scseq_20210106/outs/filtered_feature_bc_matrix.h5

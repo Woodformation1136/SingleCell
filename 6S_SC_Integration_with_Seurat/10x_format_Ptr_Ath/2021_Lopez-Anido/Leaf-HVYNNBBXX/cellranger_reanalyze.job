@@ -1,0 +1,8 @@
+#!/bin/bash
+
+cellranger reanalyze --params PARAMS.csv \
+                     --localcores 32 \
+                     --localmem 128 \
+                     --localvmem 64 \
+                     --id 20200528 \
+                     --matrix /home/woodformation/Dry_lab_bench/Cre/20210527_scseq_Ath_2021Lopez-Anido/filtered_gene_bc_matrices_h5.h5

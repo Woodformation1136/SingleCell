@@ -1,0 +1,8 @@
+#!/bin/bash
+
+cellranger reanalyze --params PARAMS.csv \
+                     --localcores 32 \
+                     --localmem 32 \
+                     --localvmem 32 \
+                     --id 20210519 \
+                     --matrix /home/woodformation/Dry_lab_bench/Cre/20210505_rerun_scseq_Tar_from_Ku_RK/Ta_UMI_filtered100.h5

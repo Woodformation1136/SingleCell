@@ -1,0 +1,7 @@
+#!/bin/bash
+
+cellranger mkref \
+    --genome=refgenome_Ptrichocarpa_533_v4.1 \
+    --fasta=/home/woodformation/Lab_data_storage/GenomicsData/Ptrichocarpa_533_v4.1/Ptrichocarpa_533_v4.0.fa \
+    --genes=/home/woodformation/Lab_data_storage/GenomicsData/Ptrichocarpa_533_v4.1/Ptrichocarpa_533_v4.1.gene.gtf \
+

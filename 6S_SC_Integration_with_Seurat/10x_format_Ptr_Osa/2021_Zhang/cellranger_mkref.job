@@ -1,0 +1,8 @@
+#!/bin/bash
+
+cellranger mkref \
+    --genome=refgenome_Osativa_ensembl_release51 \
+    --fasta=/home/woodformation/Lab_data_storage/GenomicsData/Osativa_ensembl_release51/Oryza_sativa.IRGSP-1.0.dna_sm.toplevel.fa \
+    --genes=/home/woodformation/Lab_data_storage/GenomicsData/Osativa_ensembl_release51/Oryza_sativa.IRGSP-1.0.51.chr.gtf \
+
+

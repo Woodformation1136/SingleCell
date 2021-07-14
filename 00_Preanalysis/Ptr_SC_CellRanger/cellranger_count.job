@@ -1,0 +1,8 @@
+#!/bin/bash
+
+cellranger count \
+    --id=Ptr_scseq_20210106 \
+    --transcriptome=refgenome_Ptrichocarpa_533_v4.1/ \
+    --fastqs=/media/woodformation/YCLlab_Raw_LabMember/Rawdata_20200610/RNA-seq/03_Single_cell_sequencing/TENxGenomics/TEN_Populus_trichocarpa/fastq_path \
+    --sample=YCL \
+

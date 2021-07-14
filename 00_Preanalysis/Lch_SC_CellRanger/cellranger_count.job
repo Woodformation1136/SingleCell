@@ -1,0 +1,8 @@
+#!/bin/bash
+
+cellranger count \
+    --id=Lch_scseq_20210109 \
+    --transcriptome=ref_Liriodendron_chinense_20191212/ \
+    --fastqs=/media/woodformation/YCLlab_Raw_LabMember/Rawdata_20200610/RNA-seq/03_Single_cell_sequencing/TENxGenomics/TEN_Liriodendron_chinense/Rawdata \
+    --sample=scRNAseq-1,scRNAseq-2,scRNAseq-3,scRNAseq-4 \
+

@@ -1,0 +1,13 @@
+#!/bin/bash
+
+#cellranger count \
+#    --id=Osa_scseq_20210529_2021Zhang_Root1 \
+#    --transcriptome=./refgenome_Osativa_ensembl_release51/ \
+#    --fastqs=./ \
+#    --sample=osRoot1
+
+cellranger count \
+    --id=Osa_scseq_20210529_2021Zhang_Root2 \
+    --transcriptome=./refgenome_Osativa_ensembl_release51/ \
+    --fastqs=./ \
+    --sample=osRoot2

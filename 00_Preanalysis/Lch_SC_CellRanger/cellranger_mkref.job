@@ -1,0 +1,7 @@
+#!/bin/bash
+
+cellranger mkref \
+    --genome=ref_Liriodendron_chinense_20191212 \
+    --fasta=/home/woodformation/Lab_data_storage/GenomicsData/Liriodendron_chinense_20191212/LIR.pbjelly.reN.final.fasta \
+    --genes=/home/woodformation/Lab_data_storage/GenomicsData/Liriodendron_chinense_20191212/Liriodendron_chinense_addGeneIDandExon.gtf \
+

@@ -1,0 +1,185 @@
+#!/bin/bash
+##### Script information #####
+# Author: RK
+# Co-author: Cre
+# Date: 2021/01/27
+
+
+##### Preprocessing and parameters setting #####
+### Input files
+inputFileList='./20210127_Inputfilelist.csv'
+genomePath='/home/woodformation/Lab_data_storage/GenomicsData/Ptrichocarpa_533_v4.1/Ptrichocarpa_533_v4.0.fa'
+gtfPath='/home/woodformation/Lab_data_storage/GenomicsData/Ptrichocarpa_533_v4.1/Ptrichocarpa_533_v4.1.gene_addExon.gtf'
+### Alignment parameters
+maxIntron=17787
+readLength=75
+isStrandness_dUTP_LCM=true # true false
+### Differential expression analysis parameters
+isPaired=false # true false
+sigSide=Both # Up Down Both
+FDR=0.05
+foldChange=1 # >= 1
+### Calculation resource
+threadsNum=32
+
+
+##### Processes #####
+### Software version
+echo '=====Software version====='
+echo 'R 4.0.3'
+echo 'hisat2 2.2.1'
+echo 'samtools 1.10'
+echo 'stringtie 2.1.3b'
+echo 'DESeq2 1.28.1'
+
+### A. Prepare the input sample lists
+echo '=====Prepare the input sample lists====='
+date +%Y-%m-%d_%H:%M:%S
+Rscript process_Table2Files.R $inputFileList
+
+
+### B-1. Build the index file for reads alignment with HISAT2
+echo '=====Build the index file for reads alignment with HISAT2====='
+date +%Y-%m-%d_%H:%M:%S
+
+mkdir outputHISAT2
+
+# Use GTF to make exon and splicesite file
+hisat2_extract_splice_sites.py $gtfPath > outputHISAT2/Genome.ss
+hisat2_extract_exons.py $gtfPath > outputHISAT2/Genome.exon
+
+hisat2-build	-f \
+				-p $threadsNum \
+				--exon outputHISAT2/Genome.exon \
+				--ss outputHISAT2/Genome.ss \
+				$genomePath \
+				outputHISAT2/index
+
+for manifest in $(ls ./outputSampleList)
+do
+
+	### B-2. Align the reads with HISAT2
+	echo '=====Align the reads with HISAT2====='
+	date +%Y-%m-%d_%H:%M:%S
+	
+	# Read in the read file table (manifest.tsv)
+	fqFileTable=./outputSampleList/${manifest}
+
+	SID=$manifest
+	Read_1=''
+	Read_2=''
+	while read R1 R2 ID
+	do
+		if [ "$Read_1" = '' ]
+		then
+			Read_1=$R1
+			Read_2=$R2
+		else
+			Read_1=${Read_1},${R1}
+			Read_2=${Read_2},${R2}
+		fi
+	done < $fqFileTable
+
+	completeOutputPrefix=outputHISAT2_${SID}
+	if $isStrandness_dUTP_LCM
+	then
+		hisat2	--threads $threadsNum \
+				-q --phred33 \
+				--max-intronlen $maxIntron \
+				--secondary \
+				--fr \
+				--rna-strandness FR \
+				--new-summary \
+				--summary-file ${completeOutputPrefix}_summary.out \
+				-x outputHISAT2/index \
+				-1 $Read_1 -2 $Read_2 \
+				-S ${completeOutputPrefix}_Aligned.out.sam
+				#--downstream-transcriptome-assembly (for StringTie)
+				#--dta-cufflinks (for Cufflinks)
+	else
+		hisat2	--threads $threadsNum \
+				-q --phred33 \
+				--max-intronlen $maxIntron \
+				--secondary \
+				--fr \
+				--new-summary \
+				--summary-file ${completeOutputPrefix}_summary.out \
+				-x outputHISAT2/index \
+				-1 $Read_1 -2 $Read_2 \
+				-S ${completeOutputPrefix}_Aligned.out.sam
+				#--downstream-transcriptome-assembly (for StringTie)
+				#--dta-cufflinks (for Cufflinks)
+				#--rna-strandness RF
+	fi
+
+	alignFilename=${completeOutputPrefix}_Aligned.out
+
+	# Convert the sam file into bam file (sam -> bam)
+	echo '=====Convert the sam file into bam file (sam -> bam)====='
+	date +%Y-%m-%d_%H:%M:%S
+	samtools view -b --threads $threadsNum -o ${alignFilename}.bam ${alignFilename}.sam
+	rm ${alignFilename}.sam
+
+	# Convert the bam file into sorted.bam file (bam -> sorted.bam)
+	echo '=====Convert the bam file into sorted.bam file (bam -> sorted.bam)====='
+	date +%Y-%m-%d_%H:%M:%S
+	samtools sort --threads $threadsNum -o ${alignFilename}.sorted.bam ${alignFilename}.bam
+	rm ${alignFilename}.bam
+
+	# Build the bam index file [sorted.bam +> bai]
+	echo '=====Build the bam index file [sorted.bam +> bai]====='
+	date +%Y-%m-%d_%H:%M:%S
+	samtools index ${alignFilename}.sorted.bam
+
+
+	### C-1. Calculate the read counts of each transcript with StringTie
+	echo '=====Calculate the read counts of each transcript with StringTie====='
+	date +%Y-%m-%d_%H:%M:%S
+	if $isStrandness_dUTP_LCM
+	then
+		stringtie $alignFilename.sorted.bam \
+				--fr \
+				-G $gtfPath \
+				-o outputStringtie_gtf_${SID}/outputStringtie_${SID}_assembledTranscripts.gtf \
+				-A outputStringtie_geneAbundances/${SID}.tsv \
+				-v -p $threadsNum \
+				-e
+	else
+		stringtie $alignFilename.sorted.bam \
+				-G $gtfPath \
+				-o outputStringtie_gtf_${SID}/outputStringtie_${SID}_assembledTranscripts.gtf \
+				-A outputStringtie_geneAbundances/${SID}.tsv \
+				-v -p $threadsNum \
+				-e
+	fi
+
+	mv ${alignFilename}.sorted.bam outputHISAT2
+	mv ${alignFilename}.sorted.bam.bai outputHISAT2
+	mv ${completeOutputPrefix}_summary.out outputHISAT2
+
+done
+
+### C-2. Extract raw counts from the StringTie-output GTFs
+echo '=====Extract raw counts from the StringTie-output GTFs====='
+date +%Y-%m-%d_%H:%M:%S
+prepDE.py3 -i ./ \
+		-l $readLength \
+		-g outputStringtie_gene_count_matrix.csv \
+		-t outputStringtie_transcript_count_matrix.csv
+
+mkdir outputStringtie
+mv outputStringtie_gtf_*/*.gtf outputStringtie
+rm -r outputStringtie_gtf_*
+
+
+### D. Conduct diffetential epxression analysis with DESeq2
+echo '=====Conduct diffetential epxression analysis with DESeq2====='
+date +%Y-%m-%d_%H:%M:%S
+Rscript process_DESeq2.R $inputFileList outputStringtie_gene_count_matrix.csv $isPaired $sigSide $FDR $foldChange
+
+mv outputStringtie_gene_count_matrix.csv outputStringtie
+mv outputStringtie_transcript_count_matrix.csv outputStringtie
+mv outputStringtie_geneAbundances outputStringtie
+
+echo '=====Finish====='
+date +%Y-%m-%d_%H:%M:%S
