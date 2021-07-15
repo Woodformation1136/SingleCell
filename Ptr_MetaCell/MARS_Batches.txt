@@ -1,0 +1,2 @@
+Amp.Batch.ID	Seq.Batch.ID	Batch.Set.ID	dataset	color
+Pt_10XUMItab	Pt_10XUMItab	Pt_10XUMItab	Pt	darkgoldenrod

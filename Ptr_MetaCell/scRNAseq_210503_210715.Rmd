@@ -1,0 +1,63 @@
+---
+title: "scRNAseq_Ptr"
+output: html_document
+---
+
+## 0. Setup
+```{r setup, include=FALSE}
+# R version 3.6.3
+# Preparation: 
+library(metacell) #v. 0.3.41
+library(ggplot2) #v. 3.3.0
+work_dir <- getwd() # Working directory
+
+```
+
+
+## MetaCell analyses
+```{r }
+# Prepare for metacell package
+detach("package:metacell", unload = T) # make sure nothing is already loaded
+library(metacell)
+# Prepare a directory
+dir.create(paste(work_dir,"/metacell/", sep = ""))
+scdb_init(paste(work_dir,"/metacell/", sep = ""), force_reinit=T)
+## read in UMI tables
+mcell_import_multi_mars("mat", dataset_table_fn = paste(work_dir,"/MARS_Batches.txt", sep = ""), base_dir = paste(work_dir,"/processed_data_files", sep = ""), force = TRUE) # ./processed_data_files should contain Pt_10XUMItab (the UMI table of P. trichocarpa)
+
+# Select gene markers for metacell grouping
+PtSum=colSums(as.matrix(scdb_mat("mat")@mat))
+large_cells=names(which(PtSum>15000)) # IDs of these wells
+mcell_mat_ignore_cells(new_mat_id="Pt_500_15000",mat_id="mat",ig_cells=large_cells) # Exclude these GEMs with too many UMIs
+mcell_add_gene_stat(gstat_id="gene_stat_Pt_500_15000", mat_id="Pt_500_15000", force=T) # compute gene stats
+mcell_gset_filter_multi(gstat_id="gene_stat_Pt_500_15000",gset_id="clustering_markers_Pt_500_15000",T_tot=20,T_top3=1,T_szcor=-0.01,T_vm=0.2,T_niche=0.05,force_new=T) # Selected 4278 markers
+
+# Grouping cells
+mcell_add_cgraph_from_mat_bknn(mat_id="Pt_500_15000",gset_id="clustering_markers_Pt_500_15000",graph_id="graph_Pt_500_15000",K=40,dsamp=F) # initial graph # 4629 cells and 4278 genes
+mcell_coclust_from_graph_resamp(coc_id="coc_Pt_500_15000",graph_id="graph_Pt_500_15000",min_mc_size=50,p_resamp=0.75,n_resamp=1000) # bootstrapin
+mcell_mc_from_coclust_balanced(mat_id="Pt_500_15000",coc_id="coc_Pt_500_15000",mc_id="mc_Pt_500_15000",K=40,min_mc_size=50,alpha=3) # final grpah
+# filtered 1775783 left with 653403 based on co-cluster imbalance
+# building metacell object, #mc 21
+#reordering metacells by hclust and most variable two markers
+#reorder on Potri.009G092300.v4.1 vs Potri.003G178200.v4.1
+
+# Metacells and 2D projection
+## create an arbitrary coloring of the metacells
+mc_Pt_500_15000=scdb_mc("mc_Pt_500_15000")
+mc_Pt_500_15000@colors=colorRampPalette(c("darkgray", "burlywood1", "chocolate4", "blue", "red"))(ncol(mc_Pt_500_15000@mc_fp))
+scdb_add_mc("mc_Pt_500_15000",mc_Pt_500_15000) #overwrite the mc object with the color definitions
+## 2d projection
+mcell_mc2d_force_knn(mc2d_id="2dproj_Pt_500_15000",mc_id="mc_Pt_500_15000", graph_id="graph_Pt_500_15000")
+mc2d_Pt_500_15000 = scdb_mc2d("2dproj_Pt_500_15000")
+
+# Scatter plot of single cells
+sc_df <- data.frame(mc2d_Pt_500_15000@sc_x, mc2d_Pt_500_15000@sc_y); sc_df <- cbind(sc_df, as.factor(mc_Pt_500_15000@mc)); colnames(sc_df) = c("X","Y", "color")
+mc_df <- data.frame(mc2d_Pt_500_15000@mc_x, mc2d_Pt_500_15000@mc_y); colnames(mc_df) = c("X","Y"); mc_df$color = as.factor(rownames(mc_df))
+pdf(file=paste(work_dir,"/MetaCell_Pt_500_15000.pdf", sep = ""))
+ggplot(sc_df, aes(X,Y)) + geom_point(data = sc_df, aes(X, Y, color = color), size = 0.4, show.legend = FALSE) + scale_color_manual(values = colorRampPalette(c("darkgray", "burlywood1", "chocolate4", "blue", "red"))(ncol(mc_Pt_500_15000@mc_fp)) ) + coord_fixed(ratio = 1) + geom_label(data = mc_df, aes(X, Y, label = color), position = position_stack(vjust = 0.9), label.size=NA, fill = NA, size = 5)
+dev.off()
+
+
+```
+
+
