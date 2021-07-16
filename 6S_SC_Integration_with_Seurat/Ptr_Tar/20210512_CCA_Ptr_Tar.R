@@ -296,7 +296,7 @@ plot(projection_UMAP$UMAP_1,
      xlab='UMAP_1',ylab='UMAP_2',main='PtrTar')
 for(i in 1:nrow(color_table)) text(Seurat_cluster_center[1,i],
                                    Seurat_cluster_center[2,i],
-                                   color_table$Seurat_cluster[i],cex=1.5)
+                                   color_table$Seurat_cluster[i],cex=2.5)
 dev.off()
 
 

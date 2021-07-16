@@ -122,6 +122,7 @@ Ath_output_various_integrated_umap = function(Combined_object = Combined_object_
     projection_UMAP = Combined_object@reductions$umap@cell.embeddings %>% as.data.frame
     projection_UMAP$Species = projection_UMAP %>% rownames %>% substr(1,3)
     projection_UMAP$Barcode = projection_UMAP %>% rownames %>% substring(5)
+    projection_UMAP$Seurat_clusters = Combined_object@meta.data$seurat_clusters %>% as.numeric
     
     Ptr_projection_UMAP = filter(projection_UMAP,Species=='Ptr')
     Ath_projection_UMAP = filter(projection_UMAP,Species=='Ath')
@@ -192,6 +193,28 @@ Ath_output_various_integrated_umap = function(Combined_object = Combined_object_
     points(Ath_projection_UMAP$UMAP_1,
            Ath_projection_UMAP$UMAP_2,
            pch=20,col='#C59739',cex=0.3)
+    dev.off()
+    
+    ##Color with the Cre-picking color
+    n_cluster = max(projection_UMAP$Seurat_clusters)
+    Seurat_cluster_center = sapply(seq(n_cluster),
+                                   function(i){
+                                       foo = filter(projection_UMAP,Seurat_clusters==i)
+                                       return(c(mean(foo$UMAP_1),mean(foo$UMAP_2)))
+                                   })
+    Cre30_color_table = data.frame(Seurat_cluster = seq(n_cluster),
+                                   Color = scales::hue_pal()(n_cluster))
+    png(paste0(plot_prefix,'Both_Seurat_UMAP_colored_by_Seurat_cluster_Cre30.png'),
+        pointsize=10,width=20,height=15,units='cm',res=300)
+    plot(projection_UMAP$UMAP_1,
+         projection_UMAP$UMAP_2,
+         pch=20,cex=0.3,
+         col=with(Cre30_color_table,
+                  Color[match(projection_UMAP$Seurat_clusters,Seurat_cluster)]),
+         xlab='UMAP_1',ylab='UMAP_2',main='PtrAth')
+    for(i in seq(n_cluster)) text(Seurat_cluster_center[1,i],
+                                  Seurat_cluster_center[2,i],
+                                  i,cex=2.5)
     dev.off()
 }
 

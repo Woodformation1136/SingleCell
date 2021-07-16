@@ -21,7 +21,7 @@ setwd('C:\\Users\\Jung-Chen\\Desktop\\Single_cell\\20210600_SCseq_species_integr
 # 黃綠: '#C9DD31'
 # 天藍: '#AEE9F4'
 # 樵藍: '#46CBE5'
-# 貴紫7B'
+# 貴紫: '#A9517B'
 
 #Setup the Seurat Object
 Ptr.data = Read10X(data.dir = 'Ptr_filtered_feature_bc_matrix')
@@ -296,7 +296,7 @@ plot(projection_UMAP$UMAP_1,
      xlab='UMAP_1',ylab='UMAP_2',main='PtrLch')
 for(i in 1:nrow(color_table)) text(Seurat_cluster_center[1,i],
                                    Seurat_cluster_center[2,i],
-                                   color_table$Seurat_cluster[i],cex=1.5)
+                                   color_table$Seurat_cluster[i],cex=2.5)
 dev.off()
 
 
