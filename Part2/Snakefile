@@ -1,0 +1,558 @@
+import datetime
+DATE = datetime.date.today().strftime("%Y%m%d")
+
+
+# Setup config and functions ===================================================
+# load configuration file (as config)
+configfile: "./configs/config.json"
+
+# get VARS from config
+def get_parameter_by_species(param_name):
+    return lambda wildcards: config[param_name][wildcards.species]
+def get_parameter_by_sample(param_name):
+    return lambda wildcards: config[param_name][wildcards.sample]
+
+
+# Define rules for execution ===================================================
+# Rename fastq of PalChen2021 (for cellranger input)
+## e.g. CRR299248_f1.fastq.gz -> CRR299248_S1_L001_R1_001.fastq.gz
+##      CRR299248_r2.fastq.gz -> CRR299248_S1_L001_R2_001.fastq.gz
+rule rename_for_cellragner:
+    input:
+        "rawdata/20211201_scseq_Pal_2021Chen"
+    output:
+        directory("results/Fastq_renamed_PalChen2021")
+    shell:
+        """
+        mkdir --parents {output}
+
+        for file in $(ls {input} | grep fastq.gz$); do
+            if [[ $file == *"f1"* ]] ; then
+                cp {input}/$file {output}/${{file%_*z}}_S1_L001_R1_001.fastq.gz
+            elif [[ $file == *"r2"* ]] ; then
+                cp {input}/$file {output}/${{file%_*z}}_S1_L001_R2_001.fastq.gz
+            fi
+        done
+        """
+
+# Analyze SCseq data from TenX Genomics
+rule cellranger_mkref_TenX:
+    input:
+        genome_fasta = get_parameter_by_species(param_name="GENOME_FASTA"),
+        genome_gtf = get_parameter_by_species(param_name="GENOME_GTF")
+    output:
+        directory("cellranger_ref_TenX_{species}")
+    log:
+        "logs/cellranger_mkref_TenX_{species}.log"
+    shell:
+        """
+        cellranger mkref \
+            --fasta={input.genome_fasta} \
+            --genes={input.genome_gtf} \
+            --genome={output} \
+            > {log}
+        """
+
+rule cellranger_count_TenX:
+    input:
+        cellranger_ref = "cellranger_ref_TenX_{species}",
+        fastq = get_parameter_by_species(param_name="FASTQ_DIR")
+    output:
+        directory("cellranger_count_TenX_{species}")
+    log:
+        "logs/cellranger_count_TenX_{species}.log"
+    params:
+        sample = get_parameter_by_species(param_name="CELLRANGER_SAMPLE")
+    shell:
+        """
+        cellranger count \
+            --localcores 32 \
+            --localmem 128 \
+            --localvmem 64 \
+            --transcriptome={input.cellranger_ref} \
+            --fastqs={input.fastq} \
+            --sample={params.sample} \
+            --id={output} \
+            > {log}
+        """
+
+rule cellranger_reanalysis_TenX:
+    input:
+        matrix_h5_dir = "cellranger_count_TenX_{species}"
+    output:
+        directory("cellranger_reanalysis_TenX_{species}")
+    log:
+        "logs/cellranger_reanalysis_TenX_{species}.log"
+    params:
+        pars = get_parameter_by_species(param_name="CELLRANGER_PARAMS")
+    shell:
+        """
+        cellranger reanalyze \
+            --localcores 32 \
+            --localmem 32 \
+            --localvmem 32 \
+            --id {output} \
+            --params {params.pars} \
+            --matrix {input.matrix_h5_dir}/outs/filtered_feature_bc_matrix.h5 \
+             > {log}
+        """
+
+rule collect_cellranger_results_TenX:
+    input:
+        "cellranger_ref_TenX_{species}",
+        "cellranger_count_TenX_{species}", 
+        "cellranger_reanalysis_TenX_{species}"
+    output:
+        directory("results/SCseq_TenX_{species}")
+    shell:
+        """
+        mkdir --parents {output}
+        mv {input} {output}
+        """
+
+# Analyze SCseq data from MARseq
+rule transform_MARSseq_data_into_hd5:
+    conda:
+        "envs/py37.yml"
+    input:
+        umi = get_parameter_by_species(param_name="MARS_UMI_DIR"),
+        cds = get_parameter_by_species(param_name="MARS_CDS_DIR")
+    output:
+        matrix_h5 = "results/h5_for_cellranger/UMI_filtered100_{species}.h5"
+    log:
+        "logs/transform_MARSseq_data_into_hd5_{species}.log"
+    shell:
+        """
+        mkdir --parents results/h5_for_cellranger
+        python scripts/HD5_generation.py \
+            --umi_dir {input.umi} \
+            --cds {input.cds} \
+            --output_hd5 {output.matrix_h5} \
+            --umi_criteria 100
+        """
+
+rule cellranger_reanalysis_MARSseq:
+    input:
+        matrix_h5 = "results/h5_for_cellranger/UMI_filtered100_{species}.h5"
+    output:
+        directory("cellranger_reanalysis_MARSseq_{species}")
+    log:
+        "logs/cellranger_reanalysis_MARSseq_{species}.log"
+    params:
+        pars = get_parameter_by_species(param_name="CELLRANGER_PARAMS")
+    shell:
+        """
+        mkdir --parents {output}
+        cellranger reanalyze \
+            --localcores 32 \
+            --localmem 32 \
+            --localvmem 32 \
+            --id {output} \
+            --params {params.pars} \
+            --matrix {input.matrix_h5} \
+             > {log}
+        """
+
+rule collect_cellranger_results_MARSseq:
+    input:
+        "cellranger_reanalysis_MARSseq_{species}"
+    output:
+        directory("results/SCseq_MARSseq_{species}")
+    shell:
+        """
+        mkdir --parents {output}
+        mv {input} {output}
+        """
+
+# Compute descriptive statistics of the quantification result
+rule get_quatification_summary:
+    input:
+        input_dirs = lambda wildcards: ["results/SCseq_" + s for s in config["MULTI_SAMPLES"][wildcards.Multi]]
+    output:
+        output_csv = "results/Summary_Multi_{Multi}.csv"
+    params:
+        species_list = config["SPECIES"]
+    script:
+        "scripts/get_quatification_summary.R"
+
+# Plot cellranger umap by cellranger cluster
+rule plot_cellranger_umap_by_cellranger_cluster:
+    input:
+        input_reanalysis_dirs = "results/SCseq_{sample}"
+    output:
+        output_dir = directory("results/Cellranger_figures/{sample}")
+    params:
+        cluster_number = get_parameter_by_sample(param_name="CELLRANGER_CLUSTER_NUMBER"),
+        color = get_parameter_by_sample(param_name="CELLRANGER_CLUSTER_COLOR")
+    script:
+        "scripts/plot_cellranger_data.R"
+
+# Create protein id to gene id table
+rule get_protein2gene_table:
+    output:
+        "results/protein2gene.csv"
+    script:
+        "scripts/get_protein2gene.R"
+
+# Extract protein id of which gene expressed in SCseq data
+rule get_expressed_protein_id:
+    input:
+        protein2gene_csv = "results/protein2gene.csv",
+        input_dirs = lambda wildcards: ["results/SCseq_" + s for s in config["MULTI_SAMPLES"][wildcards.Multi]]
+    output:
+        expressed_protein_id_txt = "results/Expressed_proteinID/Multi_{Multi}.txt"
+    script:
+        "scripts/get_proteinID_of_expressed_genes.R"
+
+# Preprocess ortholog data
+## 1. melt ortholog table from wide to long
+## 2. turn protein id into gene id (customized process in R code)
+rule preprocess_ortho_data:
+    input:
+        "rawdata/20210130_Geneclustering_OrthoMCL/all.group"
+    output:
+        output = "results/Ortholog_table/all_group_long.csv",
+        output_convertedID = "results/Ortholog_table/all_group_long_convertedID.csv"
+    shell:
+        """
+        mkdir --parents results/Ortholog_table
+        Rscript scripts/ortholog_data_preprocess.R \
+            -i {input} -o {output.output} -t {output.output_convertedID}
+        """
+
+# Filter long ortholog table by getting unique transcript for each gene
+rule get_primary_ortho_data:
+    input:
+        "results/Ortholog_table/all_group_long.csv"
+    output:
+        "results/Ortholog_table/primary_group_long.csv"
+    script:
+        "scripts/get_primary_ortholog.R"
+
+# Integrate SCseq samples
+## Calculate ortholog expression for overlap ortholog clusters
+rule compute_ortholog_expression_pair:
+    input:
+        ortholog_long_csv = "results/Ortholog_table/all_group_long_convertedID.csv",
+        input_dirs = [
+            "results/SCseq_{Ref}",
+            "results/SCseq_{Other}"
+        ]
+    output:
+        output_dir = directory("results/Ortholog_UMI_matrix/{Ref}_and_{Other}")
+    script:
+        "scripts/calculate_ortholog_UMI_counts.R"
+
+rule compute_ortholog_expression_multi:
+    input:
+        ortholog_long_csv = "results/Ortholog_table/all_group_long_convertedID.csv",
+        input_dirs = lambda wildcards: ["results/SCseq_" + s for s in config["MULTI_SAMPLES"][wildcards.Multi]]
+    output:
+        output_dir = directory("results/Ortholog_UMI_matrix/Multi_{Multi}")
+    script:
+        "scripts/calculate_ortholog_UMI_counts.R"
+
+## Conduct samples integration
+rule integrate_sample_pair:
+    input:
+        input_expression_dir = "results/Ortholog_UMI_matrix/{Ref}_and_{Other}"
+    output:
+        output_path = "results/Integrated_rds/{Ref}_and_{Other}.rds"
+    params:
+        k_param = lambda wildcards: config["SEURAT_K_PARAM"][wildcards.Other],
+        integration_order = [
+            "{Ref}", "{Other}"
+        ]
+    script:
+        "scripts/integrate_scseq_data_with_CCA.R"
+
+rule integrate_sample_multi:
+    input:
+        input_expression_dir = "results/Ortholog_UMI_matrix/Multi_{Multi}"
+    output:
+        output_path = "results/Integrated_rds/Multi_{Multi}.rds"
+    params:
+        k_params = 3,
+        integration_order = lambda wildcards: config["MULTI_SAMPLES"][wildcards.Multi]
+    script:
+        "scripts/integrate_scseq_data_with_CCA.R"
+
+## Plot integration results by sample
+rule plot_integration_umap_by_sample_pair:
+    input:
+        input_integrated_rds = "results/Integrated_rds/{Ref}_and_{Other}.rds"
+    output:
+        output_dir = directory("results/Integrated_figures/UMAP_by_sample/{Ref}_and_{Other}")
+    script:
+        "scripts/plot_integrated_data_by_samples.R"
+
+rule plot_integration_umap_by_sample_multi:
+    input:
+        input_integrated_rds = "results/Integrated_rds/Multi_{Multi}.rds"
+    output:
+        output_dir = directory("results/Integrated_figures/UMAP_by_sample/Multi_{Multi}")
+    script:
+        "scripts/plot_integrated_data_by_samples.R"
+
+## Plot integration results by cellranger cluster on sample
+rule plot_integration_umap_by_cellranger_cluster_on_sample_pair:
+    input:
+        input_integrated_rds = "results/Integrated_rds/{Ref}_and_{Other}.rds",
+        input_dirs = [
+            "results/SCseq_{Ref}",
+            "results/SCseq_{Other}"
+        ]
+    output:
+        output_dir = directory("results/Integrated_figures/UMAP_by_cellranger_cluster_on_sample/{Ref}_and_{Other}")
+    params:
+        cluster_number_list = config["CELLRANGER_CLUSTER_NUMBER"],
+        color_list = config["CELLRANGER_CLUSTER_COLOR"]
+    script:
+        "scripts/plot_integrated_data_by_cellranger_cluster_on_sample.R"
+
+rule plot_integration_umap_by_cellranger_cluster_on_sample_multi:
+    input:
+        input_integrated_rds = "results/Integrated_rds/Multi_{Multi}.rds",
+        input_dirs = lambda wildcards: ["results/SCseq_" + s for s in config["MULTI_SAMPLES"][wildcards.Multi]]
+    output:
+        output_dir = directory("results/Integrated_figures/UMAP_by_cellranger_cluster_on_sample/Multi_{Multi}")
+    params:
+        cluster_number_list = config["CELLRANGER_CLUSTER_NUMBER"],
+        color_list = config["CELLRANGER_CLUSTER_COLOR"]
+    script:
+        "scripts/plot_integrated_data_by_cellranger_cluster_on_sample.R"
+
+## Plot integration results by seurat cluster
+rule plot_integration_umap_by_seurat_cluster_pair:
+    input:
+        input_integrated_rds = "results/Integrated_rds/{Ref}_and_{Other}.rds",
+        input_dirs = [
+            "results/SCseq_{Ref}",
+            "results/SCseq_{Other}"
+        ]
+    output:
+        output_dir = directory("results/Integrated_figures/UMAP_by_seurat_cluster/{Ref}_and_{Other}")
+    params:
+        cluster_number_list = config["CELLRANGER_CLUSTER_NUMBER"],
+        color_list = config["CELLRANGER_CLUSTER_COLOR"]
+    script:
+        "scripts/plot_integrated_data_by_suerat_cluster.R"
+
+rule plot_integration_umap_by_seurat_cluster_multi:
+    input:
+        input_integrated_rds = "results/Integrated_rds/Multi_{Multi}.rds",
+        input_dirs = lambda wildcards: ["results/SCseq_" + s for s in config["MULTI_SAMPLES"][wildcards.Multi]]
+    output:
+        output_dir = directory("results/Integrated_figures/UMAP_by_seurat_cluster/Multi_{Multi}")
+    params:
+        cluster_number_list = config["CELLRANGER_CLUSTER_NUMBER"],
+        color_list = config["CELLRANGER_CLUSTER_COLOR"]
+    script:
+        "scripts/plot_integrated_data_by_suerat_cluster.R"
+
+## Plot integration results with overlapping heatmap
+rule plot_integration_umap_overlap_heatmap_pair:
+    input:
+        input_integrated_rds = "results/Integrated_rds/{Ref}_and_{Other}.rds"
+    output:
+        output_dir = directory("results/Integrated_figures/Overlap_heatmap/{Ref}_and_{Other}")
+    params:
+        ref_sample = "{Ref}"
+    script:
+        "scripts/plot_integrated_data_as_overlap_heatmap.R"
+
+rule plot_integration_umap_overlap_heatmap_multi:
+    input:
+        input_integrated_rds = "results/Integrated_rds/Multi_{Multi}.rds"
+    output:
+        output_dir = directory("results/Integrated_figures/Overlap_heatmap/Multi_{Multi}")
+    params:
+        ref_sample = lambda wildcards: config["MULTI_SAMPLES"][wildcards.Multi][0]
+    script:
+        "scripts/plot_integrated_data_as_overlap_heatmap.R"
+
+## Plot integration results by cellranger cluster with lineage
+rule plot_integration_umap_by_cellranger_cluster_with_lineage_multi:
+    input:
+        input_integrated_rds = "results/Integrated_rds/Multi_Species4_Sample5.rds",
+        input_dirs = ["results/SCseq_" + s for s in config["MULTI_SAMPLES"]["Species4_Sample5"]]
+    output:
+        output_dir = directory("results/Integrated_figures/UMAP_by_cellranger_cluster_with_lineage/Multi_Species4_Sample5")
+    params:
+        cluster_number_list = config["CELLRANGER_CLUSTER_NUMBER"],
+        color_list = config["CELLRANGER_CLUSTER_COLOR"]
+    script:
+        "scripts/plot_integrated_data_with_lineage.R"
+
+## Plot ortholog distributions of given ortholog cluster id
+rule plot_ortholog_distribution_multi:
+    input:
+        ortholog_long_csv = "results/Ortholog_table/primary_group_long.csv",
+        plot_ortholog_csv = "rawdata/20220331_orthogroup_list_revised.csv"
+    output:
+        output_dir = directory("results/Ortholog_figures/Ortholog_distribution")
+    params:
+        species_order = [
+            "PhP", "MaP", "SeM", "PiT", "GnM", "AmT", "OrS",
+            "LiC", "TrA", "PoT", "EuG", "ArT", "CoC", "SoL"
+        ]
+    script:
+        "scripts/plot_ortholog_distribution.R"
+
+# Calculate log2-transformed normalized ortholog UMI for each sample
+rule compute_log2_norm_ortholog_expression_each:
+    input:
+        ortholog_long_csv = "results/Ortholog_table/all_group_long_convertedID.csv",
+        input_dirs = lambda wildcards: ["results/SCseq_" + s for s in config["MULTI_SAMPLES"][wildcards.Multi]]
+    output:
+        output_dir = directory("results/Ortholog_UMI_matrix/Each_log2_norm/Multi_{Multi}")
+    script:
+        "scripts/calculate_ortholog_log2_norm_UMI_counts.R"
+
+# Plot ortholog expression along lineage
+rule plot_ortholog_expression_along_lineage_multi:
+    input:
+        input_dirs = lambda wildcards: ["results/SCseq_" + s for s in config["MULTI_SAMPLES"][wildcards.Multi]],
+        input_integrated_rds = "results/Integrated_rds/Multi_{Multi}.rds",
+        log2_norm_ortho_dirs = "results/Ortholog_UMI_matrix/Each_log2_norm/Multi_{Multi}",
+        plot_ortholog_csv = "rawdata/20220307_orthogroup_list.csv"
+    output:
+        output_dir = directory("results/Ortholog_figures/Ortholog_UMI_along_lineage/Multi_{Multi}")
+    params:
+        cluster_number_list = config["CELLRANGER_CLUSTER_NUMBER"],
+        color_list = config["CELLRANGER_CLUSTER_COLOR"]
+    script:
+        "scripts/plot_ortholog_expression_along_lineage.R"
+
+# Plot ortholog expression violin plot of each sample (only keep two zero expression values for each sample)
+rule plot_ortholog_expression_violinplot_multi:
+    input:
+        log2_norm_ortho_dirs = "results/Ortholog_UMI_matrix/Each_log2_norm/Multi_{Multi}",
+        plot_ortholog_csv = "rawdata/20220331_orthogroup_list_revised.csv"
+    output:
+        output_dir = directory("results/Ortholog_figures/Ortholog_violinplot/Multi_{Multi}")
+    params:
+        sample_list = lambda wildcards: config["MULTI_SAMPLES"][wildcards.Multi]
+    script:
+        "scripts/plot_ortholog_expression_violinplot.R"
+
+# Extract peptide sequences of primary transcripts in each given ortholog group
+rule get_primary_aa_faa:
+    input:
+        combined_faa = "rawdata/combined.faa",
+        ortholog_long_csv = "results/Ortholog_table/primary_group_long.csv"
+    output:
+        output_dir = directory("results/Fasta_primary_transcript_peptides")
+    params:
+        plot_ortholog_csv = "rawdata/20220331_orthogroup_list_revised.csv"
+    script:
+        "scripts/get_primary_transcripts_aa_faa.R"
+
+# Build phylogenetic tree for each given ortholog group
+rule build_phylogenetic_tree:
+    input:
+        "results/Fasta_primary_transcript_peptides"
+    output:
+        output_dir = directory("results/Phylogenetic_tree")
+    log:
+        "logs/build_phylogenetic_tree.log"
+    shell:
+        """
+        mkdir --parents {output.output_dir}
+        mkdir --parents temp_dir
+        cd temp_dir
+        for file in $(ls -r ../{input} | grep faa$); do
+            mafft --thread 48 --auto ../{input}/$file > $file
+            iqtree -nt AUTO -ntmax 48 -bb 1000 -s $file > ../{log}
+            mv * ../{output.output_dir}
+        done
+        cd ..
+        rmdir temp_dir
+        """
+
+# Add color tag and mark expressed gene on the phylogenetic trees
+## Manual operation
+## 1. Add file extension ".nwk" to contree files from results/Phylogenetic_tree
+## 2. Open .nwk file with MEGA GUI
+## 3. Edit phylogenetic tree
+##    (1) Cancel branch length
+##    (2) Use topology only
+##    (3) Root tree with the most earliest ancestor species
+##    (4) Rearrange by swapping and/or filpping
+## 4. Save session as mtsx file
+## 5. Save as svg image to manual_results/Tree_from_MEGA
+rule decorate_phylogenetic_trees:
+    input:
+        expressed_protein_id_txt = "results/Expressed_proteinID/Multi_{Multi}.txt",
+        input_tree_dir = "manual_results/Tree_from_MEGA"
+    output:
+        output_dir = directory("results/Phylogenetic_tree_decorated/Multi_{Multi}")
+    script:
+        "scripts/add_color_tag_to_trees.R"
+
+#############
+#############
+
+rule all:
+    input:
+        expand(
+            "results/Cellranger_figures/{sample}",
+            sample = [
+                "TenX_Ptr",
+                "TenX_Ptr2",
+                "MARSseq_Ptr3",
+                "MARSseq_Ptr4",
+                "MARSseq_Ptr34",
+                "TenX_PalChen2021",
+                "TenX_Lch",
+                "MARSseq_Egr",
+                "MARSseq_Egr2",
+                "MARSseq_Tar",
+                "MARSseq_Tar2",
+                "TenX_Tar3"
+            ]
+        ),
+        expand(
+            "results/Integrated_figures/{plottype}/{samples}",
+            plottype = [
+                "UMAP_by_cellranger_cluster_on_sample",
+                "UMAP_by_seurat_cluster",
+                "Overlap_heatmap",
+                "UMAP_by_sample"
+            ],
+            samples = [
+                "TenX_Ptr_and_TenX_Ptr2",
+                "TenX_Ptr_and_MARSseq_Ptr34",
+                "TenX_Ptr_and_TenX_PalChen2021",
+                "TenX_Ptr_and_TenX_Lch",
+                "TenX_Ptr_and_MARSseq_Egr",
+                "TenX_Ptr_and_MARSseq_Tar",
+                "TenX_Ptr_and_TenX_Tar3",
+                "MARSseq_Egr_and_MARSseq_Egr2",
+                "MARSseq_Tar_and_MARSseq_Tar2",
+                "MARSseq_Tar_and_TenX_Tar3",
+                "Multi_Species4_Sample5",
+                "Multi_PtrTar_Sample4",
+                "Multi_Ptr_Batch4",
+                "Multi_Ptr_Batch4as3",
+                "Multi_Tar_Batch3"
+            ]
+        ),
+        "results/Ortholog_UMI_matrix/Each_log2_norm/Multi_All",
+        "results/Integrated_figures/UMAP_by_cellranger_cluster_with_lineage/Multi_Species4_Sample5",
+        "results/Ortholog_figures/Ortholog_UMI_along_lineage/Multi_Species4_Sample5",
+        "results/Ortholog_figures/Ortholog_violinplot/Multi_Species4",
+        "results/Ortholog_figures/Ortholog_distribution",
+        "results/Phylogenetic_tree",
+        "results/Phylogenetic_tree_decorated/Multi_Species4_Sample5",
+        "results/Summary_Multi_All.csv"
+
+rule one:
+    input:
+        "results/Cellranger_figures/TenX_Tar3"
+
+rule test:
+    params:
+        species_list = config["SPECIES"]
+    script:
+        "scripts/temp.R"

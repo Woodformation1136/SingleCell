@@ -1,0 +1,126 @@
+{
+    "GENOME_FASTA" : {
+        "Ptr" : "/home/woodformation/HDD1/GenomicsData/Ptrichocarpa_533_v4.1/Ptrichocarpa_533_v4.0.fa",
+        "Ptr2" : "/home/woodformation/HDD1/GenomicsData/Ptrichocarpa_533_v4.1/Ptrichocarpa_533_v4.0.fa",
+        "Lch" : "/home/woodformation/HDD1/GenomicsData/Liriodendron_chinense_20191212/LIR.pbjelly.reN.final.fasta",
+        "PalChen2021" : "/home/woodformation/HDD1/GenomicsData/Ptrichocarpa_533_v4.1/Ptrichocarpa_533_v4.0.fa"
+    },
+    "GENOME_GTF" : {
+        "Ptr" : "/home/woodformation/HDD1/GenomicsData/Ptrichocarpa_533_v4.1/Ptrichocarpa_533_v4.1.gene.gtf",
+        "Ptr2" : "/home/woodformation/HDD1/GenomicsData/Ptrichocarpa_533_v4.1/Ptrichocarpa_533_v4.1.gene.gtf",
+        "Lch" : "/home/woodformation/HDD1/GenomicsData/Liriodendron_chinense_20191212/Liriodendron_chinense_addGeneIDandExon.gtf",
+        "PalChen2021" : "/home/woodformation/HDD1/GenomicsData/Ptrichocarpa_533_v4.1/Ptrichocarpa_533_v4.1.gene.gtf"
+    },
+    "PROTEIN_FASTA" : {
+        "Ptr" : "/home/woodformation/HDD1/GenomicsData/Ptrichocarpa_533_v4.1/Ptrichocarpa_533_v4.0.fa",
+        "Ptr2" : "/home/woodformation/HDD1/GenomicsData/Ptrichocarpa_533_v4.1/Ptrichocarpa_533_v4.0.fa",
+        "Lch" : "/home/woodformation/HDD1/GenomicsData/Liriodendron_chinense_20191212/LIR.pbjelly.reN.final.fasta",
+        "PalChen2021" : "/home/woodformation/HDD1/GenomicsData/Ptrichocarpa_533_v4.1/Ptrichocarpa_533_v4.0.fa"
+    },
+    "FASTQ_DIR" : {
+        "Ptr" : "/media/woodformation/Spike_Temporary4/03_Single_cell_sequencing/TENxGenomics/TEN_Populus_trichocarpa/fastq_path",
+        "Ptr2" : "/media/woodformation/Spike_Temporary4/20220401_scseq_Ptr_batch2_100G/HS22057_FASTQ/rawData",
+        "Lch" : "/media/woodformation/Spike_Temporary4/03_Single_cell_sequencing/TENxGenomics/TEN_Liriodendron_chinense/Rawdata",
+        "PalChen2021" : "results/Fastq_renamed_PalChen2021"
+    },
+    "CELLRANGER_SAMPLE" : {
+        "Ptr" : "YCL",
+        "Ptr2" : "PTR",
+        "Lch" : "scRNAseq-1,scRNAseq-2,scRNAseq-3,scRNAseq-4",
+        "PalChen2021" : "CRR299248,CRR299249,CRR299250,CRR299251,CRR299252,CRR299253,CRR299254,CRR299255"
+    },
+    "CELLRANGER_PARAMS" : {
+        "Ptr" : "/home/woodformation/SSD4/RK/project_SingleCell/configs/Ptr_params.csv",
+        "Ptr2" : "/home/woodformation/SSD4/RK/project_SingleCell/configs/Ptr_params.csv",
+        "Ptr3" : "/home/woodformation/SSD4/RK/project_SingleCell/configs/Ptr_params.csv",
+        "Ptr4" : "/home/woodformation/SSD4/RK/project_SingleCell/configs/Ptr_params.csv",
+        "Ptr34" : "/home/woodformation/SSD4/RK/project_SingleCell/configs/Ptr_params.csv",
+        "Lch" : "/home/woodformation/SSD4/RK/project_SingleCell/configs/Lch_params.csv",
+        "PalChen2021" : "/home/woodformation/SSD4/RK/project_SingleCell/configs/Ptr_params.csv",
+        "Egr" : "/home/woodformation/SSD4/RK/project_SingleCell/configs/Egr_params.csv",
+        "Egr2" : "/home/woodformation/SSD4/RK/project_SingleCell/configs/Egr_params.csv",
+        "Tar" : "/home/woodformation/SSD4/RK/project_SingleCell/configs/Tar_params.csv",
+        "Tar2" : "/home/woodformation/SSD4/RK/project_SingleCell/configs/Tar_params.csv"
+    },
+    "CELLRANGER_CLUSTER_NUMBER" : {
+        "TenX_Ptr" : 10,
+        "TenX_Ptr2" : 10,
+        "MARSseq_Ptr3" : 10,
+        "MARSseq_Ptr4" : 10,
+        "MARSseq_Ptr34" : 10,
+        "TenX_Lch" : 10,
+        "TenX_PalChen2021" : 20,
+        "MARSseq_Egr" : 10,
+        "MARSseq_Egr2" : 10,
+        "MARSseq_Tar" : 18,
+        "MARSseq_Tar2" : 10
+    },
+    "CELLRANGER_CLUSTER_COLOR" : {
+        "TenX_Ptr" : ["#1F77B4","#8C564B","#FF7F0F","#2AA02A","#F8E71C","#9467BD","#D62728","#E377C2","#9B9B9B","#4B4B4B"],
+        "TenX_Ptr2" : ["#1F77B4","#8C564B","#FF7F0F","#2AA02A","#F8E71C","#9467BD","#D62728","#E377C2","#9B9B9B","#4B4B4B"],
+        "MARSseq_Ptr3" : ["#1F77B4","#8C564B","#FF7F0F","#2AA02A","#F8E71C","#9467BD","#D62728","#E377C2","#9B9B9B","#4B4B4B"],
+        "MARSseq_Ptr4" : ["#1F77B4","#8C564B","#FF7F0F","#2AA02A","#F8E71C","#9467BD","#D62728","#E377C2","#9B9B9B","#4B4B4B"],
+        "MARSseq_Ptr34" : ["#1F77B4","#8C564B","#FF7F0F","#2AA02A","#F8E71C","#9467BD","#D62728","#E377C2","#9B9B9B","#4B4B4B"],
+        "TenX_Lch" : ["#1F77B4","#8C564B","#D62728","#FF7F0F","#F8E71C","#E377C2","#9467BD","#2AA02A","#63EE9B","#9B9B9B"],
+        "TenX_PalChen2021" : ["#1F77B4","#8C564B","#E377C2","#1F77B4","#F8E71C","#D62728","#D62728","#2AA02A","#1F77B4","#FF7F0F","#E377C2","#2AA02A","#9B9B9B","#9467BD","#2AA02A","#D62728","#E377C2","#FF7F0F","#4B4B4B","#8C564B"],
+        "MARSseq_Egr" : ["#9467BD","#F8E71C","#8C564B","#1F77B4","#2AA02A","#FF7F0F","#D62728","#E377C2","#4B4B4B","#9B9B9B"],
+        "MARSseq_Egr2" : ["#9467BD","#F8E71C","#8C564B","#1F77B4","#2AA02A","#FF7F0F","#D62728","#E377C2","#4B4B4B","#9B9B9B"],
+        "MARSseq_Tar" : ["#1F77B4","#E377C2","#55A3FF","#8C564B","#9467BD","#FF7F0F","#46CBE5","#F8E71C","#2AA02A","#9B9B9B","#9B9B9B","#9B9B9B","#9B9B9B","#9B9B9B","#9B9B9B","#9B9B9B","#9B9B9B","#9B9B9B"],
+        "MARSseq_Tar2" : ["#1F77B4","#E377C2","#55A3FF","#8C564B","#9467BD","#FF7F0F","#46CBE5","#F8E71C","#2AA02A","#9B9B9B"]
+    },
+    "MARS_UMI_DIR" : {
+        "Ptr3": "rawdata/20220520_MAR-seq_organized/UMItable/Ptr_batch1",
+        "Ptr4": "rawdata/20220520_MAR-seq_organized/UMItable/Ptr_batch2",
+        "Ptr34": "rawdata/20220520_MAR-seq_organized/UMItable/Ptr_batch12",
+        "Egr": "rawdata/20220520_MAR-seq_organized/UMItable/Egr_batch1",
+        "Egr2": "rawdata/20220520_MAR-seq_organized/UMItable/Egr_batch2",
+        "Tar": "rawdata/20220520_MAR-seq_organized/UMItable/Tar_batch1",
+        "Tar2": "rawdata/20220520_MAR-seq_organized/UMItable/Tar_batch2"
+    },
+    "MARS_CDS_DIR" : {
+        "Ptr3": "rawdata/20220520_MAR-seq_organized/UMItable/Pt_CDS.txt",
+        "Ptr4": "rawdata/20220520_MAR-seq_organized/UMItable/Pt_CDS.txt",
+        "Ptr34": "rawdata/20220520_MAR-seq_organized/UMItable/Pt_CDS.txt",
+        "Egr": "rawdata/20220520_MAR-seq_organized/UMItable/Eg_CDS.txt",
+        "Egr2": "rawdata/20220520_MAR-seq_organized/UMItable/Eg_CDS.txt",
+        "Tar": "rawdata/20220520_MAR-seq_organized/UMItable/Ta_CDS.txt",
+        "Tar2": "rawdata/20220520_MAR-seq_organized/UMItable/Ta_CDS.txt"
+    },
+    "SEURAT_K_PARAM" : {
+        "TenX_Ptr2" : 3,
+        "MARSseq_Ptr3" : 3,
+        "MARSseq_Ptr4" : 3,
+        "MARSseq_Ptr34" : 3,
+        "TenX_Lch" : 3,
+        "TenX_PalChen2021" : 3,
+        "MARSseq_Egr" : 3,
+        "MARSseq_Egr2" : 3,
+        "MARSseq_Tar" : 3,
+        "MARSseq_Tar2" : 3
+    },
+    "SPECIES" : {
+        "TenX_Ptr" : "Ptr_TenX",
+        "TenX_Ptr2" : "Ptr_TenX",
+        "MARSseq_Ptr3" : "Ptr_MARSseq",
+        "MARSseq_Ptr4" : "Ptr_MARSseq",
+        "MARSseq_Egr" : "Egr",
+        "MARSseq_Egr2" : "Egr",
+        "MARSseq_Tar" : "Tar_MARSseq",
+        "MARSseq_Tar2" : "Tar_MARSseq",
+        "TenX_Lch" : "Lch",
+        "TenX_PalChen2021" : "Pal"
+    },
+    "MULTI_SAMPLES" : {
+        "Species4": ["TenX_Ptr", "MARSseq_Egr", "MARSseq_Tar", "TenX_Lch"],
+        "Species4_Sample5": ["TenX_Ptr", "MARSseq_Egr", "MARSseq_Tar", "TenX_Lch", "TenX_PalChen2021"],
+        "Ptr_Batch3": ["TenX_Ptr", "TenX_Ptr2", "MARSseq_Ptr34"],
+        "Tar_Batch2": ["MARSseq_Tar", "MARSseq_Tar2"],
+        "All": [
+            "TenX_Ptr", "TenX_Ptr2", "MARSseq_Ptr3", "MARSseq_Ptr4",
+            "MARSseq_Egr", "MARSseq_Egr2",
+            "MARSseq_Tar", "MARSseq_Tar2",
+            "TenX_Lch",
+            "TenX_PalChen2021"
+        ]
+    }
+}
