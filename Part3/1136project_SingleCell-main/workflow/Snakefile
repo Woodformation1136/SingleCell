@@ -1,0 +1,36 @@
+import datetime
+DATE = datetime.date.today().strftime("%Y%m%d")
+
+
+# Setup config and functions ===================================================
+# Use docker image
+# container: "docker://f06b22037/bioinfobase:latest"
+
+# Load configuration file (as config)
+configfile: "./configs/config.json"
+
+# Include rules
+include: "rules/SS_MQD.smk"
+include: "rules/SS_single_cell.smk"
+include: "rules/SS_ortholog.smk"
+include: "rules/MS_single_cell.smk"
+
+
+# Define rules for execution ===================================================
+# NOTE: single run
+rule one:
+    input:
+        expand(
+            "results/MQD_analysis/differential_expression_analysis/{DEAplan}",
+            DEAplan = [
+                "Internode_S1vsS2",
+                "Internode_S2vsS3",
+                "Internode_S3vsS4",
+                "Internode_S4vsS6",
+                "Internode_S1vsOth",
+                "Internode_S2vsOth",
+                "Internode_S3vsOth",
+                "Internode_S4vsOth",
+                "Internode_S6vsOth"
+            ]
+        )
